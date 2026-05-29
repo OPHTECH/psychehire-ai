@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: psychehire-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: psychehire-api
+  template:
+    metadata:
+      labels:
+        app: psychehire-api
+    spec:
+      containers:
+        - name: api
+          image: psychehire/api:latest
+          ports:
+            - containerPort: 4000
+          envFrom:
+            - secretRef:
+                name: psychehire-secrets
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: psychehire-ml
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: psychehire-ml
+  template:
+    metadata:
+      labels:
+        app: psychehire-ml
+    spec:
+      containers:
+        - name: ml
+          image: psychehire/ml-service:latest
+          ports:
+            - containerPort: 8000
+

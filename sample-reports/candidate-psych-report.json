@@ -1,0 +1,36 @@
+{
+  "candidate": "Tari Adeyemi",
+  "role": "Operations Lead",
+  "fitScore": 88,
+  "psychGraph": {
+    "openness": 72,
+    "conscientiousness": 91,
+    "extraversion": 64,
+    "agreeableness": 78,
+    "emotionalStability": 84,
+    "integrity": 86,
+    "leadership": 81
+  },
+  "strengths": [
+    "Strong execution discipline",
+    "Composed under operational pressure",
+    "Clear accountability language"
+  ],
+  "weaknesses": [
+    "May need coaching on delegation under ambiguity",
+    "Moderate preference for structured environments"
+  ],
+  "warningSigns": [
+    "No automatic adverse action. Use structured interview follow-up for all advisory flags."
+  ],
+  "roleSuggestions": {
+    "bestRoleFit": "Operations Lead",
+    "secondaryRoleFit": "Logistics Coordinator",
+    "unsuitableRoles": ["Pure outbound sales"],
+    "developmentPathway": "Operations leadership, incident response, mentoring"
+  },
+  "hrRecommendation": "Proceed to structured panel interview.",
+  "managementRecommendation": "Evaluate delegation and cross-functional communication with scenario questions.",
+  "humanReviewRequired": true
+}
+

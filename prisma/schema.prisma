@@ -1,0 +1,310 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ORG_ADMIN
+  HR_ADMIN
+  EXECUTIVE
+  MANAGER
+  CANDIDATE
+  EMPLOYEE
+  AUDITOR
+}
+
+enum AssessmentStatus {
+  INVITED
+  IN_PROGRESS
+  SUBMITTED
+  SCORED
+  REVIEWED
+  EXPIRED
+}
+
+enum ConsentScope {
+  PSYCHOMETRIC
+  VIDEO_INTERVIEW
+  VOICE_ANALYSIS
+  WORKFORCE_ANALYTICS
+  COMMUNICATION_METADATA
+  CONTENT_ANALYSIS
+}
+
+model Organization {
+  id              String        @id @default(cuid())
+  name            String
+  slug            String        @unique
+  region          String        @default("global")
+  privacyPolicy   Json
+  featureToggles  Json
+  branding        Json
+  users           User[]
+  departments     Department[]
+  roles           JobRole[]
+  candidates      Candidate[]
+  employees       Employee[]
+  auditLogs        AuditLog[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model User {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  email          String
+  passwordHash   String
+  role           UserRole
+  name           String
+  permissions    Json
+  lastLoginAt    DateTime?
+  createdAt      DateTime      @default(now())
+  auditLogs      AuditLog[]
+
+  @@unique([organizationId, email])
+}
+
+model Department {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  managerId      String?
+  employees      Employee[]
+  roles          JobRole[]
+}
+
+model JobRole {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  departmentId   String?
+  department     Department?  @relation(fields: [departmentId], references: [id])
+  title          String
+  family         String
+  psychWeights   Json
+  competencies   Json
+  candidates     Candidate[]
+  employees      Employee[]
+}
+
+model Candidate {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  roleId         String?
+  role           JobRole?     @relation(fields: [roleId], references: [id])
+  fullName       String
+  email          String
+  phone          String?
+  biodata        Json
+  resumeUrl      String?
+  status         String       @default("active")
+  assessments    Assessment[]
+  interviews     InterviewSession[]
+  reports        Report[]
+  createdAt      DateTime     @default(now())
+}
+
+model Employee {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  departmentId   String?
+  department     Department?  @relation(fields: [departmentId], references: [id])
+  roleId         String?
+  role           JobRole?     @relation(fields: [roleId], references: [id])
+  managerId      String?
+  fullName       String
+  email          String
+  tenureMonths   Int          @default(0)
+  employmentData Json
+  assessments    Assessment[]
+  interviews     InterviewSession[]
+  performance    PerformanceRecord[]
+  surveys        SurveyResponse[]
+  workforceSignals WorkforceSignal[]
+  createdAt      DateTime     @default(now())
+}
+
+model AssessmentTemplate {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  modules        Json
+  questions      Question[]
+  scoringConfig  Json
+  active         Boolean   @default(true)
+}
+
+model Question {
+  id          String             @id @default(cuid())
+  templateId  String
+  template    AssessmentTemplate @relation(fields: [templateId], references: [id])
+  domain      String
+  trait       String
+  prompt      String
+  weight      Float
+  reverse     Boolean            @default(false)
+}
+
+model Assessment {
+  id             String           @id @default(cuid())
+  organizationId String
+  candidateId    String?
+  candidate      Candidate?       @relation(fields: [candidateId], references: [id])
+  employeeId     String?
+  employee       Employee?        @relation(fields: [employeeId], references: [id])
+  templateId     String?
+  status         AssessmentStatus @default(INVITED)
+  secureToken    String           @unique
+  expiresAt      DateTime
+  consent        ConsentRecord[]
+  responses      AssessmentResponse[]
+  score          Score?
+  createdAt      DateTime         @default(now())
+  submittedAt    DateTime?
+}
+
+model AssessmentResponse {
+  id           String     @id @default(cuid())
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id])
+  questionKey  String
+  value        Int
+  elapsedMs    Int
+  confidence   Int?
+  skipped      Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+}
+
+model Score {
+  id           String     @id @default(cuid())
+  assessmentId String     @unique
+  assessment   Assessment @relation(fields: [assessmentId], references: [id])
+  traitScores  Json
+  roleFit      Json
+  riskScores   Json
+  recommendations Json
+  humanReviewRequired Boolean @default(true)
+  createdAt    DateTime   @default(now())
+}
+
+model InterviewSession {
+  id             String       @id @default(cuid())
+  organizationId String
+  candidateId    String?
+  candidate      Candidate?   @relation(fields: [candidateId], references: [id])
+  employeeId     String?
+  employee       Employee?    @relation(fields: [employeeId], references: [id])
+  secureToken    String       @unique
+  status         String       @default("scheduled")
+  questions      Json
+  recordingUrl   String?
+  transcript     String?
+  analysis       InterviewAnalysis?
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+}
+
+model InterviewAnalysis {
+  id                String           @id @default(cuid())
+  sessionId          String           @unique
+  session            InterviewSession @relation(fields: [sessionId], references: [id])
+  facialSummary      Json
+  voiceSummary       Json
+  contentSummary     Json
+  behavioralScores   Json
+  flaggedSegments    Json
+  advisorySummary    String
+  createdAt          DateTime         @default(now())
+}
+
+model PerformanceRecord {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  cycle       String
+  kpis        Json
+  managerScore Int
+  peerScore   Int?
+  selfScore   Int?
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model Survey {
+  id             String   @id @default(cuid())
+  organizationId String
+  title          String
+  surveyType     String
+  anonymous      Boolean  @default(false)
+  questions      Json
+  createdAt      DateTime @default(now())
+  responses      SurveyResponse[]
+}
+
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  surveyId    String
+  survey      Survey   @relation(fields: [surveyId], references: [id])
+  employeeId  String?
+  employee    Employee? @relation(fields: [employeeId], references: [id])
+  answers     Json
+  sentiment   Int?
+  createdAt   DateTime @default(now())
+}
+
+model WorkforceSignal {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  source      String
+  policyMode  String
+  metrics     Json
+  observedAt  DateTime @default(now())
+}
+
+model Report {
+  id             String    @id @default(cuid())
+  organizationId String
+  candidateId    String?
+  candidate      Candidate? @relation(fields: [candidateId], references: [id])
+  title          String
+  reportType     String
+  content        Json
+  exportUrl      String?
+  createdAt      DateTime  @default(now())
+}
+
+model ConsentRecord {
+  id           String       @id @default(cuid())
+  assessmentId String?
+  assessment   Assessment?  @relation(fields: [assessmentId], references: [id])
+  scope        ConsentScope
+  accepted     Boolean
+  ipAddress    String?
+  userAgent    String?
+  acceptedAt   DateTime     @default(now())
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  actorUserId    String?
+  actor          User?        @relation(fields: [actorUserId], references: [id])
+  action         String
+  resourceType   String
+  resourceId     String
+  reason         String?
+  metadata       Json
+  createdAt      DateTime     @default(now())
+}
+
